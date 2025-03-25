@@ -1,12 +1,5 @@
 package main
 
-/*
-
-pedrooaj
-878710
-
-*/
-
 import (
 
 	"github.com/gin-gonic/gin"
