@@ -1,34 +1,18 @@
-package main
-
-/*
-
-pedrooaj
-878710
-
-*/
+package controllers
 
 import (
 	"context"
 	"log"
-
 	"time"
 
 	"github.com/gin-gonic/gin"
-
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"github.com/Pedrooaj/Api_rest-Go/database"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	
+
 
 )
-
-
-
-
-
-
-
-
-
 
 type User struct {
 	ID primitive.ObjectID `bson:"_id,omitempty" json:"id"`
@@ -37,7 +21,9 @@ type User struct {
 	DataCriacao time.Time `bson:"dataCriacao" json:"dataCriacao"`
 }
 
-func insertUser(c *gin.Context){
+
+
+func InsertUser(c *gin.Context){
 	var user User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(400, gin.H{"error": "Dados inválidos", "details": "São necessarios os seguintes campos Nome e Idade..."})
@@ -48,7 +34,7 @@ func insertUser(c *gin.Context){
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, err := database.InsertOne(ctx, user)
+	_, err := database.Collection().InsertOne(ctx, user)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Erro ao inserir usuário" })
 		return
@@ -58,12 +44,12 @@ func insertUser(c *gin.Context){
 }
 
 
-func listUsers(c *gin.Context) {
+func ListUsers(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-
-	cursor, err := database.Find(ctx, bson.D{})
+	
+	cursor, err := database.Collection().Find(ctx, bson.D{})
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -91,7 +77,7 @@ func listUsers(c *gin.Context) {
 }
 
 
-func deleteUser(c *gin.Context){
+func DeleteUser(c *gin.Context){
 	id := c.Param("id")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -103,17 +89,23 @@ func deleteUser(c *gin.Context){
 		return
 	}
 
-	var result bson.M
-	_,err = database.FindOneAndDelete(ctx, bson.M{"_id": objectId}).Decode(&result)
-	if err != nil {
+	result := database.Collection().FindOneAndDelete(ctx, bson.M{"_id": objectId})
+
+	if result.Err() != nil {
 		c.JSON(500, gin.H{"error": "Erro ao encontrar usuário"})
 		return
 	}
-	c.JSON(200, result)
+
+	var deletedUser bson.M
+	if err := result.Decode(&deletedUser); err != nil{
+		c.JSON(500, gin.H{"error": "Erro ao decodificar usuário deletado"})
+		return
+	}
+	c.JSON(200, deletedUser)
 }
 
 
-func getUser(c *gin.Context){
+func GetUser(c *gin.Context){
 	id := c.Param("id")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -126,26 +118,18 @@ func getUser(c *gin.Context){
 	}
 
 
-	var result bson.M
-	_,err = database.FindOne(ctx, bson.M{"_id": objectID}).Decode(&result)
-	if err != nil{
+	result := database.Collection().FindOne(ctx, bson.M{"_id": objectID})
+
+	if result.Err() != nil{
 		c.JSON(500, gin.H{"error": "Erro ao buscar usuário"})
 		return
 	}
 
-	c.JSON(200, result)
-}
+	var user bson.M
+	if err := result.Decode(&user); err != nil {
+		c.JSON(500, gin.H{"error": "Erro ao decodificar usuário"})
+		return
+	}
 
-
-
-func main(){
-	app:= gin.Default();
-
-
-	app.POST("/user", insertUser)
-	app.GET("/user/:id", getUser)
-	app.GET("/users", listUsers)
-	app.DELETE("/user/:id", deleteUser)
-
-	app.Run(":3000")
+	c.JSON(200, user)
 }

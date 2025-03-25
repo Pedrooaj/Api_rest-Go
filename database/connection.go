@@ -12,10 +12,10 @@ import (
 )
 
 
-var collection *mongo.Collection
+
 var Client *mongo.Client
 
-func connectDB() (){
+func Collection() *mongo.Collection{
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("Erro ao carregar arquivo .env")
 	}
@@ -32,7 +32,9 @@ func connectDB() (){
 	if err != nil {
 		log.Fatal(err)
 	}
-	Client = client
-	collection = client.Database("GOLANG_DB").Collection("usuarios")
 
+	Client = client
+	return client.Database("GOLANG_DB").Collection("usuarios")
 }
+
+
